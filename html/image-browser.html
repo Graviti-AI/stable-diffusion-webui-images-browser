@@ -1,0 +1,372 @@
+<div id="image-browser-app">
+    <div class="image-browser-top">
+        <div class="search-area">
+            <b-input placeholder="Search..."
+                type="search"
+                icon="magnify">
+            </b-input>
+            <b-switch class="negative-prompt-switch" v-model="negativePromptFlag">
+                Search negative prompt
+            </b-switch>
+        </div>
+        <div class="operation-icons">
+            <b-select class="filter-fields" placeholder="Select a field">
+                <option
+                    v-for="field in fieldsList"
+                    :value="field.id"
+                    :key="field.id">
+                    {{ field.name }}
+                </option>
+            </b-select>
+            
+            <div class="filter-icon" v-click-outside="closeFilter">
+                <div @click="showFilter">
+                    <b-icon
+                        icon="filter-menu-outline"
+                        size="is-medium"
+                    >
+                </div>
+                </b-icon>
+                <div class="filter-content" v-show="showFilters">
+                    <section>
+                        <p>Generate Method</p>
+                        <div class="generate-methods">
+                            <b-checkbox-button
+                                v-model="generateMethod"
+                                native-value="txt2img"
+                                type="is-primary is-outlined">
+                                <b-icon v-show="generateMethod.includes('txt2img')" icon="check"></b-icon>
+                                <span>txt2img</span>
+                            </b-checkbox-button>
+                            <b-checkbox-button
+                                v-model="generateMethod"
+                                native-value="img2img"
+                                type="is-primary is-outlined">
+                                <b-icon v-show="generateMethod.includes('img2img')" icon="check"></b-icon>
+                                <span>img2img</span>
+                            </b-checkbox-button>
+                            <b-checkbox-button 
+                                v-model="generateMethod"
+                                native-value="extra"
+                                type="is-primary is-outlined">
+                                <b-icon v-show="generateMethod.includes('extra')" icon="check"></b-icon>
+                                <span>Extra</span>
+                            </b-checkbox-button>
+                        </div>
+                    </section>
+                    <section>
+                        <p>Generate Date</p>
+                        <b-datepicker
+                            placeholder="Click to select..."
+                            v-model="generateDate"
+                            class="generate-date"
+                            range
+                            locale="en"
+                        >
+                        </b-datepicker>
+                    </section>
+                    <section>
+                        <p>Score</p>
+                        <div class="score">
+                            <b-radio-button 
+                                v-model="scoreFilter"
+                                native-value="none"
+                                type="is-primary is-outlined">
+                                None
+                            </b-radio-button>
+                            <b-radio-button 
+                                v-model="scoreFilter"
+                                native-value="1"
+                                type="is-primary is-outlined">
+                                1
+                            </b-radio-button>
+                            <b-radio-button 
+                                v-model="scoreFilter"
+                                native-value="2"
+                                type="is-primary is-outlined">
+                                2
+                            </b-radio-button>
+                            <b-radio-button 
+                                v-model="scoreFilter"
+                                native-value="3"
+                                type="is-primary is-outlined">
+                                3
+                            </b-radio-button>
+                            <b-radio-button 
+                                v-model="scoreFilter"
+                                native-value="4"
+                                type="is-primary is-outlined">
+                                4
+                            </b-radio-button>
+                            <b-radio-button 
+                                v-model="scoreFilter"
+                                native-value="5"
+                                type="is-primary is-outlined">
+                                5
+                            </b-radio-button>
+                        </div>
+                    </section>
+                    <b-button
+                        class="clear-filter"
+                        icon-left="filter-off-outline" 
+                        @click="clearFilters"
+                        type="is-primary">
+                            Clear Filters
+                    </b-button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="img-list" :style="{ height: imgContainerHeight }">
+        <vue-waterfall-easy 
+            :style="{height: imgContainerHeight}"
+            :imgs-arr="imgsArr"
+            @click="modelClick"
+            @imgError="imgErrorFn"
+            @scrollReachBottom="getData">
+            <div class="img-content" slot-scope="props">
+                <div class="item_info">{{props.value.info}}</div>
+            </div>
+        </vue-waterfall-easy>
+    </div>
+    <b-modal
+        v-model="showModelDetail"
+        width="80%"
+    >
+        <model-detail v-bind="modelProps"></model-detail>
+    </b-modal>
+</div>
+
+
+<style>
+#image-browser-app  .image-browser-top{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#tab_image_browser .modal-background {
+    background-color: rgba(10,10,10,1);
+}
+
+#image-browser-app  .image-browser-top .search-area,
+#image-browser-app  .image-browser-top .operation-icons {
+    display: flex;
+    align-items: center;
+}
+
+#image-browser-app  .image-browser-top .filter-content {
+    position: absolute;
+    right: 0;
+    width: 20%;
+    z-index: 10;
+    background-color: var(--neutral-800);
+    padding: 10px 20px;
+}
+
+#image-browser-app  .image-browser-top .filter-content p {
+    font-size: var(--text-lg);
+    margin-top: 10px;
+}
+
+
+#image-browser-app  .image-browser-top .filter-content .control label {
+    background-color: var(--background-fill-primary);
+}
+
+#image-browser-app  .image-browser-top .filter-content .generate-methods,
+#image-browser-app  .image-browser-top .filter-content .score {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#image-browser-app  .image-browser-top .search-area .negative-prompt-switch {
+    margin-left: 20px;
+}
+
+#image-browser-app  .image-browser-top .search-area input {
+    width: 16em;
+    box-shadow: var(--input-shadow);
+    border: var(--input-border-width) solid var(--input-border-color);
+    border-radius: var(--input-radius);
+    background: var(--input-background-fill);
+    color: var(--body-text-color);
+    font-weight: var(--input-text-weight);
+    font-size: var(--input-text-size);
+    line-height: var(--line-sm);
+}
+
+.operation-icons .filter-icon {
+    margin-left: 20px;
+}
+
+.operation-icons .control {
+    box-shadow: var(--input-shadow);
+    border: var(--input-border-width) solid var(--border-color-primary);
+    border-radius: var(--input-radius);
+    background: var(--input-background-fill);
+}
+
+.operation-icons .filter-fields select {
+    background: inherit;
+    border: none;
+}
+
+.vue-waterfall-easy a {
+    padding: 0 !important;
+    border-width: 0;
+}
+
+.vue-waterfall-easy .img-content {
+    position: absolute;
+    height: calc(100% - 20px);
+    width: calc(100% - 20px);
+    top: 10px;
+    text-align: center;
+}
+
+.vue-waterfall-easy .img-content:hover {
+    background-color: rgba(0,0,0,0.5);
+    transition: background-color 0.25s;
+}
+
+.vue-waterfall-easy .img-content .item_info {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    opacity: 0;
+    padding: 10px;
+    font-size: 1.4em;
+    font-weight: bold;
+    line-break: anywhere;
+    font-family: var(--font);
+    tab-size: 4;
+}
+.vue-waterfall-easy .img-content .item_info:hover {
+    opacity: 1;
+}
+
+.img-box a {
+    overflow: hidden;
+}
+
+.img-box:hover img {
+    filter: none;
+    transform: scale3d(1.1, 1.1, 1.1);
+    transition: filter 0.5s, transform 0.5s;
+}
+
+#image-browser-app .model-content {
+    display: flex;
+    overflow: hidden;
+}
+
+#image-browser-app .model-image {
+    width: 40%;
+}
+
+#image-browser-app .model-image-operation {
+    display: flex;
+    align-items: flex-start ;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+#image-browser-app button{
+    padding: calc(.3em - 1px) 1em;
+    font-weight: var(--prose-header-text-weight);
+    font-size: var(--text-lg);
+}
+
+#image-browser-app .clear-filter {
+    width: 100%;
+    margin-top: 20px;
+    margin-bottom: 10px !important;
+}
+
+#image-browser-app .model-content .model-detail {
+    width: 60%;
+    margin-left: 20px;
+}
+
+#image-browser-app .model-content .model-detail .image-title {
+    border-bottom: 1px solid var(--neutral-600);
+    padding: 5px 0;
+}
+
+#image-browser-app .model-content .model-detail .prompt-title {
+    font-weight: var(--prose-header-text-weight);
+    font-size: large;
+}
+
+#image-browser-app .model-content .model-detail .prompt-details {
+    padding: 10px;
+    background-color: var(--neutral-950);
+}
+
+#image-browser-app .model-content .model-detail .prompt-details .button-list{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 10px;
+}
+
+#image-browser-app .model-content .model-detail .prompt-text {
+    background-color: var(--neutral-900);
+    padding: 10px;
+    font-weight: var(--prose-header-text-weight);
+    font-size: var(--text-lg);
+}
+
+
+#image-browser-app  .image-browser-top .filter-content .generate-date input {
+    background-color: var(--neutral-950);
+    color: var(--body-text-color);
+}
+
+#image-browser-app  .image-browser-top .filter-content .generate-date .dropdown-menu .dropdown-content .dropdown-item,
+#image-browser-app  .image-browser-top .filter-content .generate-date .dropdown-menu .dropdown-content,
+#image-browser-app  .image-browser-top select,
+#image-browser-app  .image-browser-top input {
+    background-color: var(--neutral-950);
+}
+
+#image-browser-app .datepicker-content .datepicker-row a span {
+    color: inherit;
+}
+
+#tabs {
+    overflow: hidden;
+}
+
+#image-browser-app input::-webkit-input-placeholder,
+#image-browser-app select,
+#image-browser-app input {
+    color:var(--body-text-color);
+}
+
+#image-browser-app .control-label {
+    font-size: var(--text-lg);
+}
+
+#image-browser-app .generate-methods .control:hover span,
+#image-browser-app .generate-methods .control:hover span i,
+#image-browser-app .score .control:hover label,
+#image-browser-app .is-selected,
+#image-browser-app .is-selected span,
+#image-browser-app .is-selected span i{
+    color: var(--secondary-500);
+}
+
+#image-browser-app .rate .rate-item.set-half .is-half, .rate .rate-item.set-on .icon i,
+#image-browser-app .rate .rate-item.set-half .is-half, .rate .rate-item:hover .icon i {
+    color: #ffd970;
+}
+
+
+
+</style>
